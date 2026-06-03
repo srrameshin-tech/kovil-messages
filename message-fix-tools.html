@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Message Fix Tools</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+  body{font-family:sans-serif;padding:16px;background:#1A0A00;color:#FFE0B0;}
+  h2{text-align:center;color:#FFD700;font-size:18px;}
+  .tab-bar{display:flex;gap:8px;margin-bottom:16px;}
+  .tab{flex:1;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:sans-serif;}
+  .tab-morning{background:linear-gradient(135deg,#5C0A0A,#8B1A1A);color:#FFD700;}
+  .tab-night{background:linear-gradient(135deg,#1A0A4A,#3A1A8A);color:#D4B8FF;}
+  .tab.inactive{opacity:0.4;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .box{background:rgba(255,255,255,0.08);border:1px solid rgba(255,215,0,0.3);border-radius:12px;padding:14px;margin:10px 0;}
+  .progress{background:rgba(255,255,255,0.1);border-radius:10px;height:20px;margin:10px 0;overflow:hidden;}
+  .bar-m{background:linear-gradient(90deg,#8B1A1A,#D4A017);height:100%;transition:width 0.3s;border-radius:10px;}
+  .bar-n{background:linear-gradient(90deg,#3A1A8A,#9B7FD4);height:100%;transition:width 0.3s;border-radius:10px;}
+  button{width:100%;padding:13px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin:5px 0;font-family:sans-serif;}
+  .btn-scan-m{background:linear-gradient(135deg,#1A4A1A,#2D8A2D);color:#B8FFB8;}
+  .btn-del-m{background:linear-gradient(135deg,#5C0A0A,#8B1A1A);color:#FFD700;}
+  .btn-scan-n{background:linear-gradient(135deg,#1A1A4A,#2D2D8A);color:#D4B8FF;}
+  .btn-del-n{background:linear-gradient(135deg,#3A0A5A,#6A1AAA);color:#FFD700;}
+  button:disabled{opacity:0.4;}
+  .msg-bad{background:rgba(255,0,0,0.1);border-left:3px solid red;padding:8px;margin:4px 0;font-size:11px;border-radius:4px;white-space:pre-line;}
+  #log-m,#log-n{max-height:250px;overflow-y:auto;margin-top:8px;}
+  .done{color:#50FF50;font-weight:700;}
+  .warn{background:rgba(255,193,7,0.15);border:1px solid rgba(255,193,7,0.4);border-radius:8px;padding:10px;margin:8px 0;font-size:12px;color:#FFD700;}
+  .status{font-size:13px;color:#FFE0B0;}
+  .count{font-size:12px;color:#FFC87A;margin-top:4px;}
+</style>
+</head>
+<body>
+<h2>🛠️ Message Fix Tools</h2>
+
+<div class="tab-bar">
+  <button class="tab tab-morning" onclick="showTab('morning')" id="tab-m">🌞 காலை Fix</button>
+  <button class="tab tab-night inactive" onclick="showTab('night')" id="tab-n">🌙 இரவு Fix</button>
+</div>
+
+<!-- MORNING FIX PANEL -->
+<div class="panel active" id="panel-morning">
+  <div class="warn">⚠️ காலை messages-ல் இரவு words உள்ளவற்றை கண்டுபிடித்து delete பண்ணும்</div>
+  <div class="box">
+    <div class="status" id="status-m">Ready to scan morning messages...</div>
+    <div class="progress"><div class="bar-m" id="bar-m" style="width:0%"></div></div>
+    <div class="count" id="count-m"></div>
+  </div>
+  <button class="btn-scan-m" onclick="scan('morning')" id="scanBtn-m">🔍 Scan காலை messages</button>
+  <button class="btn-del-m" onclick="deleteFound('morning')" id="deleteBtn-m" style="display:none;">🗑 Delete தப்பான messages</button>
+  <div id="log-m"></div>
+</div>
+
+<!-- NIGHT FIX PANEL -->
+<div class="panel" id="panel-night">
+  <div class="warn" style="background:rgba(155,127,212,0.15);border-color:rgba(155,127,212,0.4);color:#D4B8FF;">⚠️ இரவு messages-ல் காலை words உள்ளவற்றை கண்டுபிடித்து delete பண்ணும்</div>
+  <div class="box" style="border-color:rgba(155,127,212,0.3);">
+    <div class="status" id="status-n">Ready to scan night messages...</div>
+    <div class="progress"><div class="bar-n" id="bar-n" style="width:0%"></div></div>
+    <div class="count" id="count-n"></div>
+  </div>
+  <button class="btn-scan-n" onclick="scan('night')" id="scanBtn-n">🔍 Scan இரவு messages</button>
+  <button class="btn-del-n" onclick="deleteFound('night')" id="deleteBtn-n" style="display:none;">🗑 Delete தப்பான messages</button>
+  <div id="log-n"></div>
+</div>
+
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyBVGVu59jDZybPFAX_pRisSrQRoXHQ0EWY",
+  authDomain:"kmbsc-chit.firebaseapp.com",
+  databaseURL:"https://kmbsc-chit-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"kmbsc-chit",
+  storageBucket:"kmbsc-chit.firebasestorage.app",
+  messagingSenderId:"511325458985",
+  appId:"1:511325458985:web:a7597bcf0f89b71405c238"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+// காலை messages-ல் இருக்கக்கூடாத இரவு keywords
+const NIGHT_WORDS = [
+  'இரவு வணக்கம்','நல்ல இரவு','இனிய துயில்','நல்ல தூக்கம்',
+  'தூக்கம் சுகமாகட்டும்','தூக்கம் இனிதாகட்டும்','தூக்கம் நிம்மதியாகட்டும்',
+  'கனவுகள் இனிமையாகட்டும்','கனவு நல்லதாகட்டும்','கனவு இனிமையாகட்டும்',
+  'இரவின் அமைதி','இரவு புனித','இரவு சாந்த','இரவு காவல்',
+  'இரவும் பகலும்','இரவு நிம்மதி','இரவு வணக்கம்',
+  'ஓய்வெடுங்கள்','நிம்மதியான ஓய்வு','இரவு மட்டும்'
+];
+
+// இரவு messages-ல் இருக்கக்கூடாத காலை keywords
+const MORNING_WORDS = [
+  'காலை வணக்கம்','நல்ல காலை','புதிய காலை','காலை தொடங்குங்கள்',
+  'காலை நம்பிக்கை','காலை அருள்','காலை செய்தி',
+  'காலை 6','காலை 7','காலை 8','காலை 9','காலை 10',
+  'இன்று தொடங்குங்கள்','இன்று முன்னேறுங்கள்',
+  'புதிய நாள்','நாளை தொடங்குவோம்','இன்றை நாளை'
+];
+
+let badKeys = { morning: [], night: [] };
+
+function showTab(type) {
+  document.getElementById('panel-morning').classList.remove('active');
+  document.getElementById('panel-night').classList.remove('active');
+  document.getElementById('panel-' + type).classList.add('active');
+  document.getElementById('tab-m').classList.toggle('inactive', type !== 'morning');
+  document.getElementById('tab-n').classList.toggle('inactive', type !== 'night');
+}
+
+async function scan(type) {
+  const isMorning = type === 'morning';
+  const keywords = isMorning ? NIGHT_WORDS : MORNING_WORDS;
+  const scanBtn = document.getElementById('scanBtn-' + (isMorning ? 'm' : 'n'));
+  const delBtn = document.getElementById('deleteBtn-' + (isMorning ? 'm' : 'n'));
+  const statusEl = document.getElementById('status-' + (isMorning ? 'm' : 'n'));
+  const countEl = document.getElementById('count-' + (isMorning ? 'm' : 'n'));
+  const barEl = document.getElementById('bar-' + (isMorning ? 'm' : 'n'));
+  const logEl = document.getElementById('log-' + (isMorning ? 'm' : 'n'));
+
+  scanBtn.disabled = true;
+  delBtn.style.display = 'none';
+  logEl.innerHTML = '';
+  badKeys[type] = [];
+  statusEl.textContent = '🔍 Scanning...';
+
+  const snap = await db.ref('kovil_messages/' + type).once('value');
+  const data = snap.val();
+  if (!data) { statusEl.textContent = 'No data!'; scanBtn.disabled = false; return; }
+
+  const entries = Object.entries(data);
+  let found = 0;
+
+  entries.forEach(([key, val]) => {
+    const text = (typeof val === 'object' ? val.text : val) || '';
+    const isBad = keywords.some(kw => text.includes(kw));
+    if (isBad) {
+      found++;
+      badKeys[type].push(key);
+      const d = document.createElement('div');
+      d.className = 'msg-bad';
+      d.innerHTML = '<b>❌</b> ' + text.substring(0, 100) + '...';
+      logEl.appendChild(d);
+    }
+  });
+
+  barEl.style.width = '100%';
+
+  if (found > 0) {
+    statusEl.textContent = '⚠️ ' + found + ' தப்பான messages கண்டுபிடிக்கப்பட்டது!';
+    countEl.textContent = 'மொத்தம்: ' + entries.length + ' | தப்பு: ' + found;
+    delBtn.style.display = 'block';
+  } else {
+    statusEl.innerHTML = '<span class="done">✅ எல்லாம் சரியாக இருக்கு! தப்பான messages இல்லை!</span>';
+    countEl.textContent = 'மொத்தம்: ' + entries.length + ' messages checked';
+  }
+  scanBtn.disabled = false;
+}
+
+async function deleteFound(type) {
+  const isMorning = type === 'morning';
+  const keys = badKeys[type];
+  if (!keys.length) return;
+
+  const delBtn = document.getElementById('deleteBtn-' + (isMorning ? 'm' : 'n'));
+  const statusEl = document.getElementById('status-' + (isMorning ? 'm' : 'n'));
+  const barEl = document.getElementById('bar-' + (isMorning ? 'm' : 'n'));
+  const logEl = document.getElementById('log-' + (isMorning ? 'm' : 'n'));
+
+  delBtn.disabled = true;
+  let done = 0;
+
+  for (const key of keys) {
+    await db.ref('kovil_messages/' + type + '/' + key).remove();
+    done++;
+    statusEl.textContent = '🗑 ' + done + ' / ' + keys.length + ' deleted...';
+    barEl.style.width = Math.round((done/keys.length)*100) + '%';
+    await new Promise(r => setTimeout(r, 80));
+  }
+
+  statusEl.innerHTML = '<span class="done">✅ ' + done + ' messages delete ஆச்சு! Clean!</span>';
+  logEl.innerHTML = '';
+  badKeys[type] = [];
+}
+</script>
+</body>
+</html>
