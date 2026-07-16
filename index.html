@@ -329,14 +329,32 @@ const SECRET_RESET_CODE = 'TEMPLE2026'; // Replace with actual key
 let generatedOTP = '';
 let appPassword = DEFAULT_PASSWORD;
 
+// Password hashing (SHA-256) — auto-migrates legacy plaintext password on next successful use
+async function sha256Hex(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function isHashFormat(str) { return typeof str === 'string' && /^[a-f0-9]{64}$/i.test(str); }
+async function verifyPassword(entered, stored) {
+  if (!stored) return false;
+  if (isHashFormat(stored)) return (await sha256Hex(entered)) === stored;
+  return entered === stored; // legacy plaintext fallback
+}
+
 // Load password from Firebase
 db.ref('appConfig/appPassword').once('value', snap => {
   if (snap.exists()) appPassword = snap.val();
 });
 
-function checkPassword() {
+async function checkPassword() {
   const pw = document.getElementById('pwInput').value.trim();
-  if (pw === appPassword) {
+  const ok = await verifyPassword(pw, appPassword);
+  if (ok) {
+    if (!isHashFormat(appPassword)) {
+      appPassword = await sha256Hex(pw);
+      db.ref('appConfig/appPassword').set(appPassword);
+    }
     document.getElementById('lockOverlay').style.display = 'none';
     sessionStorage.setItem('km_auth', '1');
   } else {
@@ -371,15 +389,16 @@ function verifyOTP() {
   }
 }
 
-function setNewPassword() {
+async function setNewPassword() {
   const newPw = document.getElementById('newPwInput').value.trim();
   if (!newPw || newPw.length < 4) {
     document.getElementById('newPwError').textContent = '❌ Min 4 characters!';
     return;
   }
+  const hashed = await sha256Hex(newPw);
   // Save to Firebase — all apps use same password
-  db.ref('appConfig/appPassword').set(newPw).then(() => {
-    appPassword = newPw;
+  db.ref('appConfig/appPassword').set(hashed).then(() => {
+    appPassword = hashed;
     alert('✅ Password மாற்றப்பட்டது! எல்லா apps-லயும் update ஆகும்.');
     document.getElementById('lockOverlay').style.display = 'none';
     sessionStorage.setItem('km_auth', '1');
@@ -407,7 +426,7 @@ const NIGHT_MESSAGES = [
 let morningMessages = [];
 let nightMessages = [];
 let isAdminLoggedIn = false;
-const ADMIN_PASSWORD = "kovil2024";
+const ADMIN_PASSWORD_HASH = "b1d5befaa18d2fbcfb708b2436ff1ee447f65db46dcab3c9ca6b0ee318837c72"; // sha256("kovil2024")
 
 function getTodayDayIndex() {
   const start = new Date('2026-06-03');
@@ -568,9 +587,9 @@ function shareWhatsApp(type) { window.open('https://wa.me/?text='+encodeURICompo
 function openAdmin() { document.getElementById('adminPanel').classList.add('open'); if(isAdminLoggedIn){document.getElementById('adminLogin').style.display='none';document.getElementById('adminForm').classList.add('active');} }
 function closeAdmin() { document.getElementById('adminPanel').classList.remove('open'); }
 
-function adminLogin() {
+async function adminLogin() {
   const pwd = document.getElementById('adminPassword').value;
-  if (pwd === ADMIN_PASSWORD) {
+  if (await sha256Hex(pwd) === ADMIN_PASSWORD_HASH) {
     isAdminLoggedIn=true;
     document.getElementById('adminLogin').style.display='none';
     document.getElementById('adminForm').classList.add('active');
