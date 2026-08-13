@@ -1,0 +1,171 @@
+{
+  "rules": {
+    "paymentLinks": {
+      ".read": false,
+      ".write": false,
+      "_meta": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.email === 'srrameshin@gmail.com'"
+      },
+      "entries": {
+        ".read": "auth != null && auth.token.email === 'srrameshin@gmail.com'",
+        ".write": "auth != null && auth.token.email === 'srrameshin@gmail.com'",
+        "$id": {
+          ".read": true,
+          "views": {
+            ".write": true,
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "confirmations": {
+            ".write": true
+          }
+        }
+      }
+    },
+    "payinfo": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'srrameshin@gmail.com'"
+    },
+    "masterPinHash": {
+      ".read": true,
+      ".write": false
+    },
+    "credentialVault": {
+      ".read": "auth != null && auth.token.email === 'srrameshin@gmail.com'",
+      ".write": "auth != null && auth.token.email === 'srrameshin@gmail.com'"
+    },
+    "safebox": {
+      ".read": "auth != null && auth.token.email === 'srrameshin@gmail.com'",
+      ".write": "auth != null && auth.token.email === 'srrameshin@gmail.com'"
+    },
+    "kmbsc": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "temple-accounts": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "contact_diary": {
+      ".read": false,
+      ".write": false,
+      "members": {
+        ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin')",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('email').val() === auth.token.email && ((!root.child('contact_diary/members').exists() && newData.child('role').val() === 'admin' && newData.child('status').val() === 'approved') || (root.child('contact_diary/members').exists() && newData.child('role').val() === 'member' && newData.child('status').val() === 'pending'))) || root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin')",
+          ".validate": "!newData.exists() || newData.hasChildren(['name', 'email', 'role', 'status', 'contactsKey'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 60"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "role": {
+            ".validate": "newData.val() === 'admin' || newData.val() === 'member'"
+          },
+          "status": {
+            ".validate": "newData.val() === 'approved' || newData.val() === 'pending'"
+          },
+          "contactsKey": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "created": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "user_contacts": {
+        "$key": {
+          ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('contactsKey').val() === $key && root.child('contact_diary/members').child(auth.uid).child('status').val() === 'approved'",
+          ".write": "auth != null && root.child('contact_diary/members').child(auth.uid).child('contactsKey').val() === $key && root.child('contact_diary/members').child(auth.uid).child('status').val() === 'approved'"
+        }
+      },
+      "categories": {
+        ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('status').val() === 'approved'",
+        ".write": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "fields": {
+        ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('status').val() === 'approved'",
+        ".write": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "settings": {
+        ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('status').val() === 'approved'",
+        ".write": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "users": {
+        ".read": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'",
+        ".write": "auth != null && root.child('contact_diary/members').child(auth.uid).child('role').val() === 'admin'"
+      }
+    },
+    "venue_chit": {
+      ".read": true,
+      ".write": true
+    },
+    "kmbsc_whatsapp": {
+      ".read": true,
+      ".write": true
+    },
+    "kovil_messages": {
+      ".read": false,
+      ".write": false,
+      "members": {
+        ".read": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin'",
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin')",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('email').val() === auth.token.email && ((!root.child('kovil_messages/members').exists() && newData.child('role').val() === 'admin' && newData.child('status').val() === 'approved') || (root.child('kovil_messages/members').exists() && newData.child('role').val() === 'member' && newData.child('status').val() === 'pending'))) || auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin')",
+          ".validate": "!newData.exists() || newData.hasChildren(['name', 'email', 'role', 'status'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length < 60"
+          },
+          "email": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "role": {
+            ".validate": "newData.val() === 'admin' || newData.val() === 'member'"
+          },
+          "status": {
+            ".validate": "newData.val() === 'approved' || newData.val() === 'pending'"
+          },
+          "created": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "morning": {
+        ".read": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('status').val() === 'approved'",
+        ".write": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin'"
+      },
+      "night": {
+        ".read": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('status').val() === 'approved'",
+        ".write": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin'"
+      }
+    },
+    "appConfig": {
+      ".read": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('kovil_messages/members').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "kovilMainAccount": {
+      ".read": true,
+      ".write": true
+    },
+    "garage": {
+      ".read": true,
+      ".write": true
+    },
+    "portalVisibility": {
+      ".read": true,
+      ".write": true
+    },
+    "errorLogs": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
