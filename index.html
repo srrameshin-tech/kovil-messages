@@ -2,6 +2,7 @@
 <html lang="ta">
 <head>
 <meta charset="UTF-8">
+<meta name="app-build" content="20260813-1010">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#8B1A1A">
 <meta name="mobile-web-app-capable" content="yes">
@@ -16,6 +17,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Serif+Tamil:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
   :root {
     --gold: #E8B020;
@@ -137,43 +139,52 @@
   .footer-temple { font-weight: 600; color: var(--deep-red); font-size: 12px; margin-bottom: 4px; }
   .lotus-divider { text-align: center; color: var(--gold); font-size: 16px; padding: 8px 0; letter-spacing: 6px; }
   .no-messages { text-align: center; padding: 40px 20px; color: var(--text-mid); font-size: 14px; }
+  .lform{display:flex;flex-direction:column;gap:11px;margin-top:6px;text-align:left;}
+  .lform input{width:100%;padding:14px 15px;border-radius:11px;font-size:16px;
+    border:1px solid rgba(212,160,23,.45);background:#fff;color:#3a2a10;
+    font-family:'Noto Sans Tamil',sans-serif;}
+  .lform input:focus{outline:none;border-color:#8B1A1A;}
+  .llink{background:none;border:none;color:#5C0A0A;font-size:13.5px;font-weight:700;
+    padding:8px;text-decoration:underline;cursor:pointer;font-family:inherit;}
+  .lmsg{min-height:18px;font-size:13px;line-height:1.45;text-align:center;color:#b3261e;margin:0;}
+  .lmsg.ok{color:#1a7f37;}
+  .mrow{display:flex;align-items:center;gap:8px;padding:11px 0;
+    border-bottom:1px solid rgba(0,0,0,.08);flex-wrap:wrap;}
+  .mrow:last-child{border-bottom:none;}
+  .mnm{flex:1;min-width:130px;font-size:15px;font-weight:700;color:#3a2a10;}
+  .msub2{display:block;color:#8a7a5a;font-size:12px;font-weight:500;word-break:break-all;}
+  .mpill{font-size:12px;font-weight:700;padding:6px 11px;border-radius:999px;border:none;
+    background:#5C0A0A;color:#FFD700;cursor:pointer;font-family:inherit;}
+  .mpill.wait{background:transparent;color:#5C0A0A;border:1px solid #5C0A0A;}
+  .mpill.no{background:transparent;color:#b3261e;border:1px solid #b3261e;}
 </style>
 </head>
 <body>
 
-<!-- PASSWORD LOCK OVERLAY -->
+<!-- SIGN IN -->
 <div class="lock-overlay" id="lockOverlay">
   <div class="lock-box">
     <div class="lock-icon">🛕</div>
     <div class="lock-title">திருக்கோவில் அருள் செய்தி</div>
-    <div class="lock-sub">ஸ்ரீ வீரமாத்தி அம்மன் & ஸ்ரீ முனியப்பன்</div>
+    <div class="lock-sub" id="lockSub">ஸ்ரீ வீரமாத்தி அம்மன் &amp; ஸ்ரீ முனியப்பன்</div>
 
-    <!-- Password Section -->
-    <div id="pwSection">
-      <input type="password" class="lock-input" id="pwInput" placeholder="Password உள்ளிடுங்கள்" onkeydown="if(event.key==='Enter')checkPassword()">
-      <div class="lock-error" id="pwError"></div>
-      <button class="btn-unlock" onclick="checkPassword()">🔓 திறக்க</button>
-      <br>
-      <button class="btn-forgot" onclick="showForgot()">Password மறந்துவிட்டீர்களா?</button>
+    <div class="lform" id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email" inputmode="email"
+             autocomplete="username" autocapitalize="none" spellcheck="false">
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="current-password">
+      <input type="text" id="signupName" placeholder="உங்கள் பெயர்" autocomplete="name" style="display:none;">
+      <button class="btn-unlock" id="loginBtn">🔓 உள்நுழை</button>
+      <p class="lmsg" id="loginMsg"></p>
+      <button class="llink" id="toggleSignupBtn">புதியவரா? கணக்கு உருவாக்குங்க</button>
+      <button class="llink" id="forgotBtn">Password மறந்துவிட்டீர்களா?</button>
     </div>
 
-    <!-- OTP Section -->
-    <div class="otp-section" id="otpSection">
-      <p style="color:#5C0A0A;font-size:13px;margin-bottom:12px">🔐 Secret Code உள்ளிடுங்கள்</p>
-      <input type="password" class="lock-input" id="otpInput" placeholder="Secret Code">
-      <div class="lock-error" id="otpError"></div>
-      <div class="lock-success" id="otpSuccess"></div>
-      <button class="btn-unlock" onclick="verifyOTP()">✅ Verify</button>
-      <br>
-      <button class="btn-forgot" onclick="showPassword()">← திரும்பு</button>
-    </div>
-
-    <!-- New Password Section -->
-    <div class="otp-section" id="newPwSection">
-      <p style="color:#5C0A0A;font-size:13px;margin-bottom:12px">🔑 புது Password set பண்ணுங்க</p>
-      <input type="password" class="lock-input" id="newPwInput" placeholder="புது Password">
-      <div class="lock-error" id="newPwError"></div>
-      <button class="btn-unlock" onclick="setNewPassword()">💾 Save பண்ணு</button>
+    <div class="lform" id="pendingBox" style="display:none;">
+      <p style="font-size:17px;font-weight:800;color:#5C0A0A;margin:0;text-align:center;">அனுமதிக்காக காத்திருக்கிறீர்கள்</p>
+      <p style="font-size:13.5px;color:#6b5a3a;line-height:1.55;margin:0;text-align:center;">
+        ரமேஷ் இந்த கணக்கை approve பண்ணனும். அதுக்கு அப்புறம் திரும்ப திறங்க.
+      </p>
+      <button class="llink" id="pendingSignOutBtn">வேற கணக்கு பயன்படுத்த</button>
     </div>
   </div>
 </div>
@@ -264,10 +275,21 @@
     <div class="admin-header"><h2>🛠 Admin Panel</h2><button class="admin-close" onclick="closeAdmin()">✕</button></div>
     <div class="admin-body">
       <div class="admin-login" id="adminLogin">
-        <p style="font-size:14px;color:#666;margin-bottom:16px;text-align:center;">🔐 Admin கடவுச்சொல்</p>
-        <input type="password" class="admin-input" id="adminPassword" placeholder="Password..." style="font-size:16px;padding:16px;margin-bottom:14px;border-radius:12px;">
-        <button onclick="adminLogin()" style="width:100%;padding:18px;background:linear-gradient(135deg,#5C0A0A,#8B1A1A);color:#FFD700;border:none;border-radius:12px;font-family:'Noto Sans Tamil',sans-serif;font-size:18px;font-weight:700;cursor:pointer;">🛕 உள்நுழை</button>
-        <p id="loginError" style="color:red;font-size:13px;margin-top:10px;text-align:center;display:none;">❌ தவறான கடவுச்சொல்!</p>
+        <p style="font-size:14px;color:#666;margin-bottom:16px;text-align:center;">
+          👑 Admin மட்டும் தான் செய்தி சேர்க்க முடியும்.
+        </p>
+        <p id="loginError" style="color:#666;font-size:13px;text-align:center;">
+          உங்க கணக்கு admin இல்ல.
+        </p>
+      </div>
+      <div class="asec-people" id="peopleSection" style="display:none;">
+        <p style="font-size:14px;font-weight:700;color:#5C0A0A;margin:14px 0 8px;">
+          👥 People <span id="ucnt" style="font-weight:800;"></span>
+        </p>
+        <div id="uadmlist"></div>
+        <p style="font-size:12px;color:#8a7a5a;margin:8px 0 4px;line-height:1.5;">
+          யாராவது sign up பண்ணா இங்க வந்து காத்திருப்பாங்க. நீங்க approve பண்ணுங்க.
+        </p>
       </div>
       <div class="admin-form" id="adminForm">
         <div class="admin-msg-count" id="msgCount">🌞 காலை: <span id="morningCount">0</span> | 🌙 இரவு: <span id="nightCount">0</span></div>
@@ -319,6 +341,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 // ---------------- AUTO CHECK: background error/crash logger ----------------
 let errorLogQueue = [];
 let errorLogFlushTimer = null;
@@ -392,93 +415,275 @@ setTimeout(runAutoCheckDigest, 2500);
 // ============================================================
 // PASSWORD SYSTEM — Firebase centralized
 // ============================================================
-const DEFAULT_PASSWORD = 'Rame@#1973';
-const RECOVERY_EMAIL = 'ramesh@sramesh.in';
-const SECRET_RESET_CODE = 'TEMPLE2026'; // Replace with actual key
-let generatedOTP = '';
-let appPassword = DEFAULT_PASSWORD;
+// The gate used to be one shared password written into this file, with a reset
+// code sitting right beside it — so anyone who opened the source could let
+// themselves in even without knowing the password. The database had no
+// authentication either. Everyone now signs in with their own account and the
+// rules only let approved members read or write.
+let currentMember = null;
 
-// Password hashing (SHA-256) — auto-migrates legacy plaintext password on next successful use
-async function sha256Hex(str) {
-  const enc = new TextEncoder().encode(str);
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+let signupMode = false;
+let pendingName = '';
+let loginBusy = false;
+
+const $km = id => document.getElementById(id);
+
+function loginMsg(text, good){
+  const el = $km('loginMsg');
+  if(!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('ok', !!good);
 }
-function isHashFormat(str) { return typeof str === 'string' && /^[a-f0-9]{64}$/i.test(str); }
-async function verifyPassword(entered, stored) {
-  if (!stored) return false;
-  if (isHashFormat(stored)) return (await sha256Hex(entered)) === stored;
-  return entered === stored; // legacy plaintext fallback
+
+function setSignupMode(on){
+  signupMode = on;
+  $km('signupName').style.display = on ? 'block' : 'none';
+  $km('loginPassword').setAttribute('autocomplete', on ? 'new-password' : 'current-password');
+  $km('loginBtn').textContent = on ? '✅ கணக்கு உருவாக்கு' : '🔓 உள்நுழை';
+  $km('toggleSignupBtn').textContent = on ? 'ஏற்கனவே கணக்கு இருக்கா? உள்நுழை' : 'புதியவரா? கணக்கு உருவாக்குங்க';
+  $km('forgotBtn').style.display = on ? 'none' : 'block';
+  loginMsg('');
 }
 
-// Load password from Firebase
-db.ref('appConfig/appPassword').once('value', snap => {
-  if (snap.exists()) appPassword = snap.val();
-});
+// Firebase error codes are not for reading. Turn them into something calm.
+function friendlyAuthMessage(code){
+  switch(code){
+    case 'auth/invalid-email':          return 'Email சரியா இல்ல.';
+    case 'auth/missing-password':       return 'Password போடுங்க.';
+    case 'auth/weak-password':          return 'Password குறைஞ்சது 6 எழுத்து இருக்கணும்.';
+    case 'auth/email-already-in-use':   return 'இந்த email-ல ஏற்கனவே கணக்கு இருக்கு. உள்நுழையுங்க.';
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':         return 'Email இல்ல password தப்பு.';
+    case 'auth/too-many-requests':      return 'நிறைய முயற்சி ஆயிடுச்சு. கொஞ்ச நேரம் கழிச்சு பாருங்க.';
+    case 'auth/network-request-failed': return 'இணைப்பு இல்ல. Network பாத்து மறுபடி முயற்சி பண்ணுங்க.';
+    case 'auth/operation-not-allowed':  return 'Email sign-in இன்னும் ஆன் பண்ணல.';
+    default:                            return 'உள்நுழைய முடியல. கொஞ்ச நேரம் கழிச்சு பாருங்க.';
+  }
+}
 
-async function checkPassword() {
-  const pw = document.getElementById('pwInput').value.trim();
-  const ok = await verifyPassword(pw, appPassword);
-  if (ok) {
-    if (!isHashFormat(appPassword)) {
-      appPassword = await sha256Hex(pw);
-      db.ref('appConfig/appPassword').set(appPassword);
+// The first person to sign up runs the temple messages, so they come straight
+// in as the admin. Everyone after them waits. The rules decide this, not this
+// code: we ask for admin and settle for pending if the rules refuse.
+function claimMembership(user, name){
+  const base = {
+    name: name || (user.email || '').split('@')[0],
+    email: user.email,
+    created: Date.now()
+  };
+  const path = 'kovil_messages/members/' + user.uid;
+  return db.ref(path).set(Object.assign({}, base, { role:'admin', status:'approved' }))
+    .catch(() => {
+      console.log('Kovil messages: not the first member, joining as pending');
+      return db.ref(path).set(Object.assign({}, base, { role:'member', status:'pending' }));
+    });
+}
+
+async function doLogin(){
+  if(loginBusy) return;
+  const email    = $km('loginEmail').value.trim();
+  const password = $km('loginPassword').value;
+  const name     = $km('signupName').value.trim();
+
+  if(!email){    loginMsg('Email போடுங்க.'); return; }
+  if(!password){ loginMsg('Password போடுங்க.'); return; }
+  if(signupMode && !name){ loginMsg('உங்க பெயர் போடுங்க.'); return; }
+
+  const btn = $km('loginBtn');
+  const label = btn.textContent;
+  loginBusy = true; btn.disabled = true; btn.textContent = 'ஒரு நிமிஷம்…';
+  loginMsg('');
+  try{
+    if(signupMode){
+      pendingName = name;
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      await claimMembership(cred.user, name);
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
     }
-    document.getElementById('lockOverlay').style.display = 'none';
-    sessionStorage.setItem('km_auth', '1');
-  } else {
-    document.getElementById('pwError').textContent = '❌ தவறான Password!';
-    document.getElementById('pwInput').value = '';
-    document.getElementById('pwInput').focus();
-    setTimeout(() => { document.getElementById('pwError').textContent = ''; }, 3000);
+    $km('loginPassword').value = '';
+  }catch(e){
+    console.error('Kovil messages: sign-in failed', e);
+    loginMsg(friendlyAuthMessage(e && e.code));
+  }finally{
+    loginBusy = false; btn.disabled = false; btn.textContent = label;
   }
 }
 
-function showForgot() {
-  document.getElementById('pwSection').style.display = 'none';
-  document.getElementById('otpSection').style.display = 'block';
+function showLogin(){
+  currentMember = null;
+  $km('loginForm').style.display = 'flex';
+  $km('pendingBox').style.display = 'none';
+  $km('lockOverlay').style.display = 'flex';
+}
+function showPending(){
+  currentMember = null;
+  $km('loginForm').style.display = 'none';
+  $km('pendingBox').style.display = 'flex';
+  $km('lockOverlay').style.display = 'flex';
 }
 
-function showPassword() {
-  document.getElementById('otpSection').style.display = 'none';
-  document.getElementById('newPwSection').style.display = 'none';
-  document.getElementById('pwSection').style.display = 'block';
-}
+// Firebase keeps the session on the device, so this runs on every open and
+// nobody has to type anything again. Watching our own member record means an
+// approval takes effect the moment it happens, with no reload.
+let memberUnsub = null;
+let claiming = false;
+let appStarted = false;
 
+function watchAuth(){
+  auth.onAuthStateChanged(user => {
+    if(memberUnsub){ memberUnsub(); memberUnsub = null; }
+    if(!user){ showLogin(); return; }
 
+    const mref = db.ref('kovil_messages/members/' + user.uid);
+    const handler = async snap => {
+      const m = snap.val();
 
-function verifyOTP() {
-  const entered = document.getElementById('otpInput').value.trim();
-  if (entered === SECRET_RESET_CODE) {
-    document.getElementById('otpSection').style.display = 'none';
-    document.getElementById('newPwSection').style.display = 'block';
-  } else {
-    document.getElementById('otpError').textContent = '❌ தவறான Secret Code!';
-    setTimeout(() => { document.getElementById('otpError').textContent = ''; }, 3000);
-  }
-}
+      // Creating the account and writing the member record travel over two
+      // different connections, and the database does not always have the new
+      // token yet when the write goes out. Claiming from in here means the
+      // token is certainly attached, and reopening the app repairs anyone
+      // already left without a record.
+      if(!m && !claiming){
+        claiming = true;
+        try{ await claimMembership(user, pendingName); }
+        catch(e){ console.error('Kovil messages: could not create the member record', e); }
+        claiming = false;
+        return;
+      }
 
-async function setNewPassword() {
-  const newPw = document.getElementById('newPwInput').value.trim();
-  if (!newPw || newPw.length < 4) {
-    document.getElementById('newPwError').textContent = '❌ Min 4 characters!';
-    return;
-  }
-  const hashed = await sha256Hex(newPw);
-  // Save to Firebase — all apps use same password
-  db.ref('appConfig/appPassword').set(hashed).then(() => {
-    appPassword = hashed;
-    alert('✅ Password மாற்றப்பட்டது! எல்லா apps-லயும் update ஆகும்.');
-    document.getElementById('lockOverlay').style.display = 'none';
-    sessionStorage.setItem('km_auth', '1');
+      if(m && m.status === 'approved'){
+        currentMember = { id:user.uid, name:m.name, email:m.email, isAdmin:m.role === 'admin' };
+        enterApp();
+      } else {
+        showPending();
+      }
+    };
+    mref.on('value', handler, err => {
+      console.error('Kovil messages: could not read membership', err);
+      showPending();
+    });
+    memberUnsub = () => mref.off('value', handler);
   });
 }
 
-// Check session
-// Hide lock if already authenticated
-if (sessionStorage.getItem('km_auth') === '1') {
-  document.getElementById('lockOverlay').style.display = 'none';
+function enterApp(){
+  $km('lockOverlay').style.display = 'none';
+  isAdminLoggedIn = !!(currentMember && currentMember.isAdmin);
+  applyAdminUI();
+  // The member record is watched live, so this can fire again mid-session when
+  // a role changes. Only the admin UI should redo itself.
+  if(appStarted) return;
+  appStarted = true;
+  loadMessages();
+  if(isAdminLoggedIn) watchMembers();
 }
+
+function applyAdminUI(){
+  const login = $km('adminLogin'), form = $km('adminForm'), people = $km('peopleSection');
+  if(!login || !form) return;
+  if(isAdminLoggedIn){
+    login.style.display = 'none';
+    form.classList.add('active');
+    if(people) people.style.display = 'block';
+    if($km('admin-upload-tab')) $km('admin-upload-tab').style.display = 'block';
+    if($km('admin-preview-tab')) $km('admin-preview-tab').style.display = 'none';
+    updateCounts();
+  } else {
+    login.style.display = 'block';
+    form.classList.remove('active');
+    if(people) people.style.display = 'none';
+  }
+}
+
+$km('loginBtn').addEventListener('click', doLogin);
+$km('toggleSignupBtn').addEventListener('click', () => setSignupMode(!signupMode));
+['loginEmail','loginPassword','signupName'].forEach(id => {
+  $km(id).addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+});
+$km('pendingSignOutBtn').addEventListener('click', () => auth.signOut());
+$km('forgotBtn').addEventListener('click', async () => {
+  const email = $km('loginEmail').value.trim();
+  if(!email){ loginMsg('முதல்ல email போட்டு, அப்புறம் இத அழுத்துங்க.'); return; }
+  try{
+    await auth.sendPasswordResetEmail(email);
+    loginMsg('Reset link அனுப்பியாச்சு. Inbox பாருங்க.', true);
+  }catch(e){
+    console.error('Kovil messages: reset failed', e);
+    loginMsg(friendlyAuthMessage(e && e.code));
+  }
+});
+
+// PEOPLE — admin only
+let members = [];
+let membersWatched = false;
+function watchMembers(){
+  if(membersWatched) return;
+  membersWatched = true;
+  db.ref('kovil_messages/members').on('value', snap => {
+    const val = snap.val() || {};
+    members = Object.entries(val).map(([id, m]) => Object.assign({ id }, m));
+    renderPeople();
+  }, err => console.error('Kovil messages: member list read failed', err));
+
+  // The old shared password is no longer used by anything; clear it out so it
+  // stops sitting in the database.
+  db.ref('appConfig/appPassword').remove().catch(() => {});
+}
+
+function renderPeople(){
+  const wrap = $km('uadmlist');
+  if(!wrap) return;
+  const pending = members.filter(m => m.status === 'pending').length;
+  $km('ucnt').textContent = pending ? `${pending} காத்திருக்காங்க` : `${members.length}`;
+
+  if(!members.length){
+    wrap.innerHTML = '<p style="font-size:13px;color:#8a7a5a;">யாரும் இன்னும் sign up பண்ணல.</p>';
+    return;
+  }
+
+  // People still waiting go on top, because they are the ones needing an answer.
+  const sorted = members.slice().sort((a,b) => {
+    const wa = a.status === 'pending' ? 0 : 1, wb = b.status === 'pending' ? 0 : 1;
+    return wa !== wb ? wa - wb : (a.name || '').localeCompare(b.name || '');
+  });
+
+  wrap.innerHTML = sorted.map(u => {
+    const mark = u.status === 'pending' ? '⏳' : (u.role === 'admin' ? '👑' : '🙂');
+    const me = u.id === (currentMember && currentMember.id);
+    let btns = '';
+    if(u.status === 'pending'){
+      btns = `<button class="mpill" onclick="apprM('${u.id}')">Approve</button>
+              <button class="mpill no" onclick="rmM('${u.id}')">Remove</button>`;
+    } else if(!me && u.role !== 'admin'){
+      btns = `<button class="mpill wait" onclick="admM('${u.id}')">Make admin</button>
+              <button class="mpill no" onclick="rmM('${u.id}')">Remove</button>`;
+    } else if(!me){
+      btns = `<button class="mpill no" onclick="rmM('${u.id}')">Remove</button>`;
+    }
+    return `<div class="mrow"><span class="mnm">${mark} ${u.name || 'Someone'}<span class="msub2">${u.email || ''}</span></span>${btns}</div>`;
+  }).join('');
+}
+
+async function apprM(id){
+  try{ await db.ref('kovil_messages/members/' + id).update({ status:'approved' }); }
+  catch(e){ console.error('Kovil messages: approve failed', e); alert('சேமிக்க முடியல. மறுபடி முயற்சி பண்ணுங்க.'); }
+}
+async function admM(id){
+  try{ await db.ref('kovil_messages/members/' + id).update({ role:'admin' }); }
+  catch(e){ console.error('Kovil messages: role change failed', e); alert('சேமிக்க முடியல. மறுபடி முயற்சி பண்ணுங்க.'); }
+}
+async function rmM(id){
+  if(id === (currentMember && currentMember.id)){ alert('உங்களையே நீக்க முடியாது.'); return; }
+  const u = members.find(x => x.id === id);
+  const admins = members.filter(x => x.role === 'admin' && x.status === 'approved');
+  if(u && u.role === 'admin' && admins.length <= 1){ alert('கடைசி admin-ஐ நீக்க முடியாது.'); return; }
+  if(!confirm(`"${u ? u.name : 'இவரை'}" நீக்கவா?`)) return;
+  try{ await db.ref('kovil_messages/members/' + id).remove(); }
+  catch(e){ console.error('Kovil messages: remove failed', e); alert('நீக்க முடியல. மறுபடி முயற்சி பண்ணுங்க.'); }
+}
+
+// The lock is opened by watchAuth() once Firebase confirms who is signed in.
 
 // ============================================================
 // MESSAGES
@@ -494,8 +699,9 @@ const NIGHT_MESSAGES = [
 
 let morningMessages = [];
 let nightMessages = [];
+// Admin is decided by the member record now, not by a password whose hash and
+// plain text were both sitting in this file.
 let isAdminLoggedIn = false;
-const ADMIN_PASSWORD_HASH = "b1d5befaa18d2fbcfb708b2436ff1ee447f65db46dcab3c9ca6b0ee318837c72"; // sha256("kovil2024")
 
 function getTodayDayIndex() {
   const start = new Date('2026-06-03');
@@ -539,14 +745,23 @@ function parseMessages(data) {
 }
 
 function loadMessages() {
+  // These used to run before anyone had signed in. The database refuses that,
+  // and the catch quietly swapped in the built-in messages — so a permission
+  // problem looked exactly like an empty temple diary. It is logged now.
   db.ref('kovil_messages/morning').once('value').then(snap => {
     morningMessages = parseMessages(snap.val()) || [...MORNING_MESSAGES];
     showMorningMessage(); updateCounts();
-  }).catch(() => { morningMessages = [...MORNING_MESSAGES]; showMorningMessage(); updateCounts(); });
+  }).catch(err => {
+    console.error('Kovil messages: could not read morning messages', err);
+    morningMessages = [...MORNING_MESSAGES]; showMorningMessage(); updateCounts();
+  });
   db.ref('kovil_messages/night').once('value').then(snap => {
     nightMessages = parseMessages(snap.val()) || [...NIGHT_MESSAGES];
     showNightMessage(); updateCounts();
-  }).catch(() => { nightMessages = [...NIGHT_MESSAGES]; showNightMessage(); updateCounts(); });
+  }).catch(err => {
+    console.error('Kovil messages: could not read night messages', err);
+    nightMessages = [...NIGHT_MESSAGES]; showNightMessage(); updateCounts();
+  });
 }
 
 function formatBold(text) { return text.replace(/\*(.*?)\*/g,'<b>$1</b>'); }
@@ -653,23 +868,15 @@ function showCopyFeedback() { const fb=document.getElementById('copyFeedback');f
 
 function shareWhatsApp(type) { window.open('https://wa.me/?text='+encodeURIComponent(buildWhatsAppText(type)),'_blank'); }
 
-function openAdmin() { document.getElementById('adminPanel').classList.add('open'); if(isAdminLoggedIn){document.getElementById('adminLogin').style.display='none';document.getElementById('adminForm').classList.add('active');} }
+function openAdmin() { document.getElementById('adminPanel').classList.add('open'); applyAdminUI(); }
 function closeAdmin() { document.getElementById('adminPanel').classList.remove('open'); }
 
-async function adminLogin() {
-  const pwd = document.getElementById('adminPassword').value;
-  if (await sha256Hex(pwd) === ADMIN_PASSWORD_HASH) {
-    isAdminLoggedIn=true;
-    document.getElementById('adminLogin').style.display='none';
-    document.getElementById('adminForm').classList.add('active');
-    document.getElementById('loginError').style.display='none';
-    document.getElementById('admin-upload-tab').style.display='block';
-    document.getElementById('admin-preview-tab').style.display='none';
-    updateCounts();
-  } else { document.getElementById('loginError').style.display='block'; document.getElementById('adminPassword').value=''; }
+async function adminLogout() {
+  closeAdmin();
+  appStarted = false;
+  try{ await auth.signOut(); }catch(e){ console.error('Kovil messages: sign-out failed', e); }
+  showLogin();
 }
-
-function adminLogout() { isAdminLoggedIn=false;document.getElementById('adminLogin').style.display='block';document.getElementById('adminForm').classList.remove('active');document.getElementById('adminPassword').value='';closeAdmin(); }
 
 function switchAdminTab(tab) {
   document.getElementById('admin-upload-tab').style.display=tab==='upload'?'block':'none';
@@ -751,9 +958,9 @@ function loadNextDayPreview() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('todayDate').textContent = formatTamilDate();
-  loadMessages();
   document.getElementById('adminPanel').addEventListener('click', function(e){if(e.target===this)closeAdmin();});
-  document.getElementById('adminPassword').addEventListener('keypress', function(e){if(e.key==='Enter')adminLogin();});
+  // Messages are loaded by enterApp(), once the database will actually answer.
+  watchAuth();
 });
 </script>
 <script>
